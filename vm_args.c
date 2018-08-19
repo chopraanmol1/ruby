@@ -162,7 +162,11 @@ args_rest_array(struct args_info *args)
     VALUE ary;
 
     if (args->rest) {
-	ary = rb_ary_subseq(args->rest, args->rest_index, RARRAY_LEN(args->rest) - args->rest_index);
+        while(args->rest_index > 0){
+            args->rest_index--;
+            rb_ary_shift(args->rest);
+        }
+        ary = args->rest;
 	args->rest = 0;
     }
     else {
@@ -301,7 +305,6 @@ static inline void
 args_setup_post_parameters(struct args_info *args, int argc, VALUE *locals)
 {
     long len;
-    args_copy(args);
     len = RARRAY_LEN(args->rest);
     MEMCPY(locals, RARRAY_CONST_PTR(args->rest) + len - argc, VALUE, argc);
     rb_ary_resize(args->rest, len - argc);
@@ -343,7 +346,6 @@ args_setup_opt_parameters(struct args_info *args, int opt_max, VALUE *locals)
 static inline void
 args_setup_rest_parameter(struct args_info *args, VALUE *locals)
 {
-    args_copy(args);
     *locals = args_rest_array(args);
 }
 
@@ -626,6 +628,10 @@ setup_parameters_complex(rb_execution_context_t * const ec, const rb_iseq_t * co
 
     if (iseq->body->param.flags.has_lead) {
 	args_setup_lead_parameters(args, iseq->body->param.lead_num, locals + 0);
+    }
+
+    if (iseq->body->param.flags.has_rest || iseq->body->param.flags.has_post){
+        args_copy(args);
     }
 
     if (iseq->body->param.flags.has_post) {
