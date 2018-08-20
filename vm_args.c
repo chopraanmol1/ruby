@@ -162,11 +162,8 @@ args_rest_array(struct args_info *args)
     VALUE ary;
 
     if (args->rest) {
-        while(args->rest_index > 0){
-            args->rest_index--;
-            rb_ary_shift(args->rest);
-        }
-        ary = args->rest;
+        ary = rb_ary_behead(args->rest, args->rest_index);
+        args->rest_index = 0;
 	args->rest = 0;
     }
     else {
@@ -563,9 +560,12 @@ setup_parameters_complex(rb_execution_context_t * const ec, const rb_iseq_t * co
     }
 
     if (ci->flag & VM_CALL_ARGS_SPLAT) {
-	args->rest = locals[--args->argc];
-	args->rest_index = 0;
-	given_argc += RARRAY_LENINT(args->rest) - 1;
+        VALUE rest = locals[--args->argc];
+        long len = RARRAY_LEN(rest);
+        MEMCPY(args->argv + args->argc, RARRAY_CONST_PTR(rest), VALUE, len);
+        args->argc += len;
+        given_argc += len - 1;
+        args->rest = Qfalse;
     }
     else {
 	args->rest = Qfalse;
